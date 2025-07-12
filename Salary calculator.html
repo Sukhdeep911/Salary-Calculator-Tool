@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Salary Calculator (with Deductions)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f2f2f2;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #444;
+    }
+    .container {
+      max-width: 450px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .checkbox-group {
+      margin-top: 15px;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      margin-right: 10px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .result {
+      margin-top: 20px;
+      background: #e9f7ef;
+      padding: 15px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Salary Calculator</h2>
+  
+  <label for="baseSalary">Base Salary (₹):</label>
+  <input type="number" id="baseSalary" min="1">
+
+  <label for="workingDays">Working Days:</label>
+  <input type="number" id="workingDays" min="1">
+
+  <label for="shortHours">Short Hours:</label>
+  <input type="number" id="shortHours" min="0">
+
+  <label for="overtimeHours">Overtime Hours:</label>
+  <input type="number" id="overtimeHours" min="0">
+
+  <div class="checkbox-group">
+    <label><input type="checkbox" id="pfCheckbox"> Apply PF Deduction (12% on earned)</label>
+    <label><input type="checkbox" id="esiCheckbox"> Apply ESI Deduction (0.75% on earned if ≤ ₹21,000)</label>
+  </div>
+
+  <label for="tdsAmount">TDS Deduction (₹):</label>
+  <input type="number" id="tdsAmount" min="0" placeholder="Enter amount if applicable">
+
+  <button type="button" onclick="calculateSalary()">Calculate</button>
+
+  <div class="result" id="result" style="display:none;"></div>
+</div>
+
+<script>
+  window.onload = function () {
+    document.getElementById('baseSalary').value = localStorage.getItem('baseSalary') || 22000;
+    document.getElementById('workingDays').value = localStorage.getItem('workingDays') || 27;
+    document.getElementById('shortHours').value = localStorage.getItem('shortHours') || 0;
+    document.getElementById('overtimeHours').value = localStorage.getItem('overtimeHours') || 1;
+    document.getElementById('tdsAmount').value = localStorage.getItem('tdsAmount') || 0;
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        calculateSalary();
+      }
+    });
+  }
+
+  function calculateSalary() {
+    const baseSalary = parseFloat(document.getElementById('baseSalary').value);
+    const workingDays = parseFloat(document.getElementById('workingDays').value);
+    const shortHours = parseFloat(document.getElementById('shortHours').value);
+    const overtimeHours = parseFloat(document.getElementById('overtimeHours').value);
+    const tdsAmount = parseFloat(document.getElementById('tdsAmount').value) || 0;
+
+    const applyPF = document.getElementById('pfCheckbox').checked;
+    const applyESI = document.getElementById('esiCheckbox').checked;
+
+    if (isNaN(baseSalary) || isNaN(workingDays) || isNaN(shortHours) || isNaN(overtimeHours) ||
+        baseSalary <= 0 || workingDays <= 0 || shortHours < 0 || overtimeHours < 0 || tdsAmount < 0) {
+      alert("Please enter valid non-negative values.");
+      return;
+    }
+
+    localStorage.setItem('baseSalary', baseSalary);
+    localStorage.setItem('workingDays', workingDays);
+    localStorage.setItem('shortHours', shortHours);
+    localStorage.setItem('overtimeHours', overtimeHours);
+    localStorage.setItem('tdsAmount', tdsAmount);
+
+    const perDay = baseSalary / workingDays;
+    const perHour = perDay / 8;
+
+    const shortHoursDeduction = shortHours * perHour;
+    const overtimePay = overtimeHours * perHour;
+
+    const lwfDeduction = 5;
+    const earnedSalary = baseSalary - shortHoursDeduction;
+
+    let pfDeduction = 0;
+    if (applyPF) {
+      pfDeduction = earnedSalary * 0.12;
+    }
+
+    let esiDeduction = 0;
+    if (applyESI && baseSalary <= 21000) {
+      esiDeduction = earnedSalary * 0.0075;
+    }
+
+    const finalSalary = earnedSalary
+      + overtimePay
+      - lwfDeduction
+      - pfDeduction
+      - esiDeduction
+      - tdsAmount;
+
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('result').innerHTML = `
+      <strong>Per Day:</strong> ₹${perDay.toFixed(2)}<br>
+      <strong>Per Hour:</strong> ₹${perHour.toFixed(2)}<br>
+      <strong>Short Hours Deduction:</strong> -₹${shortHoursDeduction.toFixed(2)}<br>
+      <strong>Overtime Pay:</strong> +₹${overtimePay.toFixed(2)}<br>
+      <strong>LWF Deduction:</strong> -₹${lwfDeduction.toFixed(2)}<br>
+      ${applyPF ? `<strong>PF Deduction (12% on earned salary):</strong> -₹${pfDeduction.toFixed(2)}<br>` : ""}
+      ${applyESI && baseSalary <= 21000 ? `<strong>ESI Deduction (0.75% on earned salary):</strong> -₹${esiDeduction.toFixed(2)}<br>` : ""}
+      ${tdsAmount > 0 ? `<strong>TDS Deduction:</strong> -₹${tdsAmount.toFixed(2)}<br>` : ""}
+      <hr>
+      <strong>Final Salary:</strong> ₹${finalSalary.toFixed(2)}
+    `;
+  }
+</script>
+
+</body>
+</html>
